@@ -1,0 +1,18 @@
+flowchart TD
+    subgraph Browser [Client Viewport]
+        DOM[Static HTML/CSS Shell]
+        Hydrate[Lightweight Hydration / Island]
+        UserAction[User Interaction]
+    end
+
+    subgraph EdgeCDN [Edge Network / Cloudflare Pages]
+        Cache[Global Edge Asset Cache]
+    end
+
+    subgraph HeadlessData [Headless Source & Services]
+        CMS[Content / Form Service]
+    end
+
+    Cache -->|Sub-100ms TTFB| DOM
+    DOM -->|Progressive Enhancement| Hydrate
+    UserAction -->|Async Submission| CMS

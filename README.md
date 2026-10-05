@@ -16,31 +16,32 @@
 | :--- | :--- |
 | **Site Type** | Corporate Marketing Site & Construction Portfolio Platform |
 | **Status** | Live in Production |
-| **Frontend Stack** | Astro v5 / Tailwind CSS v4 / Vanilla TypeScript Progressive Enhancement |
-| **Hosting & CDN** | Cloudflare Pages (Global Anycast Edge Network) |
+| **Frontend Stack** | Astro v5 / Tailwind CSS v4 / Vanilla TypeScript |
+| **Hosting & Edge Platform** | Cloudflare Pages (Global Anycast Edge Network) |
+| **Backend Integration** | Cloudflare D1 (SQL) / Cloudflare Pages Functions / Resend API |
 
 ---
 
-## Core Web Vitals & Performance Audits
+## Core Web Vitals & Performance Budget
 
-Optimized to satisfy strict mobile-first page experience standards:
+The architecture enforces strict performance constraints to consistently satisfy Google Core Web Vitals thresholds:
 
-| Metric | Target | Result | Strategy |
-| :--- | :--- | :--- | :--- |
-| **LCP** (Largest Contentful Paint) | $\le$ 2.5s | **0.8s** | Next-gen image formats (AVIF/WebP), hero preloading, edge-rendered HTML |
-| **INP** (Interaction to Next Paint) | $\le$ 200ms | **38ms** | Zero heavy runtime JS, native C++ constraint validation, passive event listeners |
-| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 | **0.00** | Reserved aspect-ratio wrappers, zero unstyled font shifts, static grid layouts |
+| Metric | Target Budget | Architectural Strategy |
+| :--- | :--- | :--- |
+| **LCP** (Largest Contentful Paint) | $\le$ 2.5s | Next-gen image formats (WebP), hero preloading, edge-delivered static HTML |
+| **INP** (Interaction to Next Paint) | $\le$ 200ms | Zero client-side framework runtime, native browser constraint validation |
+| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 | Explicit aspect-ratio containers, font-display: swap with matched fallbacks |
 
 ---
 
 ## Key Frontend Engineering Highlights
 
-- **Zero-Framework Runtime Baseline:** 100% of marketing and portfolio pages ship as pre-rendered HTML with zero hydration overhead, preserving the browser's main thread for instantaneous user input.
-- **Native Constraint Validation:** Lead inquiry forms harness native browser validation APIs with custom accessible focus-trapping rather than bulky runtime validation libraries.
+- **Zero-Framework Runtime Baseline:** Public marketing and project pages ship as static HTML with zero JavaScript framework runtime, eliminating client hydration delays and preserving the main thread for immediate user input.
+- **Native Constraint Validation:** Forms use the browser's native HTML5 validation APIs and CSS pseudo-classes (`:invalid`, `:placeholder-shown`) with accessible focus management.
 - **Dynamic Construction Milestones:** Visual timeline calculating project phases (`isCompleted`, `isCurrent`, upcoming) without layout shifts.
-- **Atomic Asset Optimization:** Sub-100ms asset loading through critical-path CSS inlining, font subsetting, and responsive image srcsets.
+- **Inlined Critical Styling:** Key layout CSS is inlined into the document `<head>`, avoiding render-blocking stylesheet network round trips.
 
-For the component tree and rendering lifecycle, see [`docs/FRONTEND_ARCHITECTURE.md`](docs/FRONTEND_ARCHITECTURE.md).
+For the sequence diagram and detailed lifecycle, see [`docs/FRONTEND_ARCHITECTURE.md`](docs/FRONTEND_ARCHITECTURE.md).
 
 ---
 

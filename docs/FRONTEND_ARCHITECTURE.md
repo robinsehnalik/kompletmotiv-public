@@ -1,83 +1,89 @@
-# Frontend Engineering & Design Decisions
+# Frontend Architecture & Engineering Decisions
 
-This document outlines the frontend architectural principles, rendering strategies, performance budgets, and UI/UX design decisions implemented for **stavimesmotivem.cz** (Komplet Motiv s.r.o.).
+This document outlines the frontend architectural principles, rendering strategies, performance budgets, and UI engineering decisions implemented for **stavimesmotivem.cz** (Komplet Motiv s.r.o.).
 
 ---
 
-## Client Interaction & Rendering Flow
+## Client Interaction & Serverless Workflow
 
 ```mermaid
-flowchart TD
-    subgraph Browser [Client Viewport]
-        DOM[Static HTML/CSS Shell]
-        ConstraintEngine[Native Constraint Validation]
-        UserAction[User Interaction]
-    end
+sequenceDiagram
+    autonumber
+    actor User as Client Browser
+    participant Edge as Cloudflare Pages Edge
+    participant Worker as /api/submit Function
+    participant DB as Cloudflare D1 (SQL)
+    participant Mail as Resend API
 
-    subgraph EdgeCDN [Edge Network / Cloudflare Pages]
-        Cache[Global Edge Asset Cache]
+    User->>Edge: GET / (or /vystavba, /kontakt)
+    Edge-->>User: 200 OK (Pre-rendered HTML + Inlined Tailwind CSS)
+    
+    Note over User: User interacts with Contact Form
+    User->>User: Event 'submit' -> form.checkValidity()
+    alt Form Invalid
+        User->>User: Add class .was-validated, focus first :invalid input
+    else Form Valid
+        User->>User: Update UI state ("Odesílám..."), lock submit button
+        User->>Worker: POST /api/submit { name, email, message }
+        Worker->>Worker: Validate request payload & headers
+        Worker->>DB: INSERT INTO submissions (name, email, message, status: 'new')
+        Worker->>Mail: Dispatch transactional auto-responder
+        Mail-->>Worker: 200 OK
+        Worker->>DB: UPDATE submissions SET status = 'replied'
+        Worker-->>User: 200 OK { success: true }
+        User->>User: Render confirmation notice, reset form fields
     end
-
-    subgraph HeadlessData [Cloudflare Edge & Serverless]
-        API[API Route /api/submit]
-        D1[Cloudflare D1 SQL]
-        Resend[Resend Transactional Mailer]
-    end
-
-    Cache -->|Sub-100ms TTFB| DOM
-    DOM -->|Progressive Enhancement| ConstraintEngine
-    UserAction -->|Async Submission| API
-    API --> D1
-    API --> Resend
 ```
 
 ---
 
 ## Architectural Principles
 
-### 1. Zero-JS Framework Baseline
-- **Pure Astro v5 Architecture:** 100% of static layout, marketing copy, and project showcases ship as pre-compiled HTML with **zero client-side framework runtime (no React / Vue on public pages)**.
-- **Progressive Enhancement via Script Modules:** Client interactions (lead inquiry form, interactive timelines, image lightboxes) are implemented through lightweight TypeScript modules bundled into native ES script tags.
-- **Main Thread Preservation:** Eliminating client hydration frameworks reduces JavaScript execution to under **15KB total**, leaving the browser main thread entirely free for instant scrolling and gestures.
+### 1. Zero-Framework Runtime Baseline
+- **Pure Static Output:** Marketing pages and portfolio views are pre-compiled into static HTML at build time using Astro v5. No monolithic SPA framework runtime (such as React or Vue) is bundled or loaded on public-facing pages.
+- **Native Script Modules:** Interactive components (e.g. contact form, gallery lightbox) use standalone vanilla TypeScript modules loaded via native browser script tags.
+- **Main Thread Availability:** Because there is no client-side virtual DOM reconciliation or hydration pass, the browser main thread remains unblocked and ready for immediate user input upon first paint.
 
-### 2. Core Web Vitals Strategy
+### 2. Core Web Vitals Performance Budget
 
-| Metric | Target | Strategy & Implementation |
+Rather than relying on unverified synthetic scores, the frontend architecture enforces concrete constraints to satisfy Google Core Web Vitals thresholds:
+
+| Metric | Target Budget | Architectural Enforcement Strategy |
 | :--- | :--- | :--- |
-| **LCP** (Largest Contentful Paint) | $\le$ 2.5s (Achieved: **0.8s**) | <ul><li>Hero assets formatted as WebP/AVIF with explicit preloading</li><li>Edge CDN caching on Cloudflare Pages guarantees sub-100ms TTFB worldwide</li><li>Zero blocking third-party scripts or bulky hydration runtimes</li></ul> |
-| **INP** (Interaction to Next Paint) | $\le$ 200ms (Achieved: **38ms**) | <ul><li>Zero hydration lag: buttons and form inputs are immediately interactive on first paint</li><li>Form validation relies on native browser C++ constraint validation engines rather than heavy JS libraries</li><li>Asynchronous dispatch executes non-blockingly via fetch with AbortSignal timeouts</li></ul> |
-| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 (Achieved: **0.00**) | <ul><li>All construction photos and media slots have fixed `aspect-ratio` wrappers (e.g. `aspect-video` / `aspect-4/3`)</li><li>System font fallbacks matched to web fonts via size-adjust and `font-display: swap`</li><li>Dynamic timeline cards reserve structural heights during state changes</li></ul> |
+| **LCP** (Largest Contentful Paint) | $\le$ 2.5s | <ul><li>Hero images served in modern WebP format with explicit preloading tags</li><li>Critical layout styles inlined into document `<head>` to eliminate render-blocking CSS requests</li><li>Edge caching on Cloudflare Pages ensures rapid HTML delivery worldwide</li></ul> |
+| **INP** (Interaction to Next Paint) | $\le$ 200ms | <ul><li>Zero client-side hydration delays: form controls and links are interactive as soon as the DOM renders</li><li>Validation uses the browser's native C++ Constraint Validation API (`checkValidity()`) instead of heavy JavaScript parsing engines</li><li>Form submissions are dispatched asynchronously via `fetch` with `AbortController` timeouts</li></ul> |
+| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 | <ul><li>All construction photos and media slots have explicit CSS `aspect-ratio` wrappers to reserve layout space before images load</li><li>Web fonts use `font-display: swap` with matched system fallback metrics to prevent text layout reflow</li><li>Milestone cards use rigid CSS grid structures so dynamic status changes do not cause height shifts</li></ul> |
 
 ---
 
-## Authentic Component Architecture Showcases
+## Production Component Architecture Showcases
 
-Public sanitized implementations of the core UI components are available directly in the repository:
+Sanitized versions of the core UI components are available directly in this repository:
 
 1. **Native Constraint Validation Form ([`components/SanitizedContactForm.astro`](../components/SanitizedContactForm.astro)):**
-   - Utilizes pure CSS pseudo-classes (`:invalid`, `:placeholder-shown`) and the browser's native `checkValidity()` API.
-   - Programmatically moves focus to the first `:invalid` input upon submission attempt to ensure strict accessibility (a11y).
-   - Live asynchronous feedback with automatic state dismiss timers.
+   - Utilizes CSS pseudo-classes (`:invalid`, `:placeholder-shown`) and native HTML5 form validation.
+   - Programmatically moves focus to the first invalid field upon submission for full accessibility (a11y).
+   - Manages asynchronous submission states (loading, success, error) with auto-dismissing notifications.
 
 2. **Construction Progress Timeline ([`components/SanitizedTimeline.astro`](../components/SanitizedTimeline.astro)):**
-   - Dynamic stage status calculation (`isCompleted`, `isCurrent`, upcoming phases).
-   - Layout shift-free vertical progression with animated status indicators.
+   - Renders project phases with dynamic status calculation (`isCompleted`, `isCurrent`, upcoming).
+   - Layout-shift-free vertical progression with pulsing indicators for active milestones.
 
-3. **Sanitized TypeScript Interaction Pattern ([`examples/sanitized-ui-pattern.ts`](../examples/sanitized-ui-pattern.ts)):**
-   - Headless TypeScript module showcasing form serialization, validation checks, and resilient error recovery.
-
----
-
-## Styling & Asset Pipeline
-
-- **Tailwind CSS v4 Engine:** Integrated directly through Vite for instant build-time utility compilation and dead-code stripping.
-- **Critical-Path CSS Inlining:** Key layout rules and design tokens are inlined into the document `<head>`, eliminating render-blocking CSS round trips.
-- **Responsive Media Delivery:** High-resolution construction photography is automatically resized into multi-resolution `srcset` arrays (mobile, tablet, desktop) to prevent mobile bandwidth waste.
+3. **Client Submission Module ([`examples/sanitized-ui-pattern.ts`](../examples/sanitized-ui-pattern.ts)):**
+   - Independent TypeScript module demonstrating form data extraction, validation checks, and error handling.
 
 ---
 
-## Accessibility (a11y) & UX
+## Asset Pipeline & Styling
 
-- **Semantic HTML5:** Native landmark tags (`<header>`, `<main>`, `<article>`, `<nav>`, `<footer>`) ensure screen reader clarity.
-- **Focus Management & Keyboard Navigation:** Form invalid traps, timeline milestones, and gallery dialogs include full keyboard accessibility.
-- **Contrast & Hierarchy:** Typography and color tokens rigorously pass WCAG 2.1 AA standards.
+- **Tailwind CSS v4 Integration:** Compiled directly via Vite at build time for precise dead-code elimination.
+- **Critical CSS Inlining:** Stylesheets are bundled and inlined to avoid render-blocking network round trips.
+- **Responsive Media Delivery:** Construction photography uses multi-resolution `sizes` and `srcset` attributes to serve appropriately sized assets to mobile viewports.
+
+---
+
+## Accessibility & Standards Compliance
+
+- **Semantic HTML5:** Native landmark elements (`<header>`, `<main>`, `<article>`, `<nav>`, `<footer>`) ensure clear structure for screen readers.
+- **Focus Management:** Invalid inputs receive automatic focus during validation attempts, allowing assistive technology users to identify and correct errors immediately.
+- **Color Contrast:** Text and background color tokens meet WCAG 2.1 AA contrast requirements.

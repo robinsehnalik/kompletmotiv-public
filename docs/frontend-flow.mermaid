@@ -1,22 +1,26 @@
-flowchart TD
-    subgraph Browser [Client Viewport]
-        DOM[Static HTML/CSS Shell]
-        ConstraintEngine[Native Constraint Validation]
-        UserAction[User Interaction]
-    end
+sequenceDiagram
+    autonumber
+    actor User as Client Browser
+    participant Edge as Cloudflare Pages Edge
+    participant Worker as /api/submit Function
+    participant DB as Cloudflare D1 (SQL)
+    participant Mail as Resend API
 
-    subgraph EdgeCDN [Edge Network / Cloudflare Pages]
-        Cache[Global Edge Asset Cache]
+    User->>Edge: GET / (or /vystavba, /kontakt)
+    Edge-->>User: 200 OK (Pre-rendered HTML + Inlined Tailwind CSS)
+    
+    Note over User: User interacts with Contact Form
+    User->>User: Event 'submit' -> form.checkValidity()
+    alt Form Invalid
+        User->>User: Add class .was-validated, focus first :invalid input
+    else Form Valid
+        User->>User: Update UI state ("Odesílám..."), lock submit button
+        User->>Worker: POST /api/submit { name, email, message }
+        Worker->>Worker: Validate request payload & headers
+        Worker->>DB: INSERT INTO submissions (name, email, message, status: 'new')
+        Worker->>Mail: Dispatch transactional auto-responder
+        Mail-->>Worker: 200 OK
+        Worker->>DB: UPDATE submissions SET status = 'replied'
+        Worker-->>User: 200 OK { success: true }
+        User->>User: Render confirmation notice, reset form fields
     end
-
-    subgraph HeadlessData [Cloudflare Edge & Serverless]
-        API[API Route /api/submit]
-        D1[Cloudflare D1 SQL]
-        Resend[Resend Transactional Mailer]
-    end
-
-    Cache -->|Sub-100ms TTFB| DOM
-    DOM -->|Progressive Enhancement| ConstraintEngine
-    UserAction -->|Async Submission| API
-    API --> D1
-    API --> Resend

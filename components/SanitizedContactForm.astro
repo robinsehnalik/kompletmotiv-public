@@ -1,0 +1,158 @@
+---
+/**
+ * Sanitized Frontend Component Showcase: Contact Inquiry Form
+ * 
+ * Source Context: stavimesmotivem.cz
+ * Demonstrates:
+ * 1. Zero-JS framework baseline (no React / Vue runtime overhead).
+ * 2. Pure CSS constraint validation styling (:invalid, :placeholder-shown).
+ * 3. Native DOM validation hook with accessible focus management.
+ */
+
+interface Props {
+  endpoint?: string;
+  submitButtonText?: string;
+}
+
+const {
+  endpoint = "/api/submit",
+  submitButtonText = "Odeslat zprávu"
+} = Astro.props;
+---
+
+<form
+  action={endpoint}
+  method="POST"
+  id="contact-form"
+  class="needs-validation bg-white border border-slate-100 rounded-2xl p-8 shadow-xs max-w-xl mx-auto"
+  novalidate
+>
+  <div class="mb-5">
+    <label for="name" class="sr-only">Celé jméno</label>
+    <input
+      type="text"
+      id="name"
+      placeholder="Celé jméno"
+      required
+      class="w-full px-4 py-3 border-2 placeholder:text-slate-400 text-slate-800 rounded-lg outline-hidden focus:ring-4 border-slate-100 focus:border-slate-300 ring-slate-100 transition-all text-sm"
+      name="name"
+    />
+    <div class="empty-feedback invalid-feedback text-red-500 text-xs mt-1 font-medium">
+      Prosím zadejte své celé jméno.
+    </div>
+  </div>
+
+  <div class="mb-5">
+    <label for="email_address" class="sr-only">E-mailová adresa</label>
+    <input
+      id="email_address"
+      type="email"
+      placeholder="E-mailová adresa"
+      name="email"
+      required
+      class="w-full px-4 py-3 border-2 placeholder:text-slate-400 text-slate-800 rounded-lg outline-hidden focus:ring-4 border-slate-100 focus:border-slate-300 ring-slate-100 transition-all text-sm"
+    />
+    <div class="empty-feedback text-red-500 text-xs mt-1 font-medium">
+      Prosím zadejte e-mailovou adresu.
+    </div>
+    <div class="invalid-feedback text-red-500 text-xs mt-1 font-medium">
+      Prosím zadejte platnou e-mailovou adresu.
+    </div>
+  </div>
+
+  <div class="mb-5">
+    <label for="message" class="sr-only">Vaše zpráva</label>
+    <textarea
+      id="message"
+      name="message"
+      required
+      placeholder="Napište nám vaši zprávu..."
+      class="w-full px-4 py-3 border-2 placeholder:text-slate-400 text-slate-800 rounded-lg outline-hidden h-36 focus:ring-4 border-slate-100 focus:border-slate-300 ring-slate-100 transition-all text-sm resize-none"
+    ></textarea>
+    <div class="empty-feedback invalid-feedback text-red-500 text-xs mt-1 font-medium">
+      Prosím zadejte text vaší zprávy.
+    </div>
+  </div>
+
+  <button
+    type="submit"
+    class="w-full py-3.5 px-6 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors cursor-pointer text-center text-sm shadow-xs"
+  >
+    {submitButtonText}
+  </button>
+
+  <div id="result" class="mt-4 text-center text-sm font-medium min-h-[1.5rem]" aria-live="polite"></div>
+</form>
+
+<style>
+  .invalid-feedback,
+  .empty-feedback {
+    display: none;
+  }
+
+  .was-validated :placeholder-shown:invalid ~ .empty-feedback {
+    display: block;
+  }
+
+  .was-validated :not(:placeholder-shown):invalid ~ .invalid-feedback {
+    display: block;
+  }
+
+  .was-validated :invalid {
+    border-color: #fca5a5; /* red-300 */
+  }
+</style>
+
+<script>
+  const form = document.getElementById("contact-form") as HTMLFormElement | null;
+  const result = document.getElementById("result");
+
+  if (form && result) {
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      form.classList.add("was-validated");
+
+      if (!form.checkValidity()) {
+        const firstInvalid = form.querySelector<HTMLElement>(":invalid");
+        if (firstInvalid) firstInvalid.focus();
+        return;
+      }
+
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData);
+
+      result.className = "mt-4 text-center text-sm font-medium text-slate-500";
+      result.textContent = "Odesílám...";
+
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const resJson = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+          result.className = "mt-4 text-center text-sm font-medium text-emerald-600";
+          result.textContent = "Děkujeme, vaše zpráva byla úspěšně odeslána!";
+          form.reset();
+          form.classList.remove("was-validated");
+        } else {
+          result.className = "mt-4 text-center text-sm font-medium text-red-500";
+          result.textContent = resJson.error || "Při odesílání došlo k chybě. Zkuste to prosím znovu.";
+        }
+      } catch {
+        result.className = "mt-4 text-center text-sm font-medium text-red-500";
+        result.textContent = "Něco se nepovedlo. Zkontrolujte připojení k internetu.";
+      } finally {
+        setTimeout(() => {
+          if (result) result.textContent = "";
+        }, 6000);
+      }
+    });
+  }
+</script>

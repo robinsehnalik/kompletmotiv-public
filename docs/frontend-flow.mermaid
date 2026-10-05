@@ -1,7 +1,7 @@
 flowchart TD
     subgraph Browser [Client Viewport]
         DOM[Static HTML/CSS Shell]
-        Hydrate[Lightweight Hydration / Island]
+        ConstraintEngine[Native Constraint Validation]
         UserAction[User Interaction]
     end
 
@@ -9,10 +9,14 @@ flowchart TD
         Cache[Global Edge Asset Cache]
     end
 
-    subgraph HeadlessData [Headless Source & Services]
-        CMS[Content / Form Service]
+    subgraph HeadlessData [Cloudflare Edge & Serverless]
+        API[API Route /api/submit]
+        D1[Cloudflare D1 SQL]
+        Resend[Resend Transactional Mailer]
     end
 
     Cache -->|Sub-100ms TTFB| DOM
-    DOM -->|Progressive Enhancement| Hydrate
-    UserAction -->|Async Submission| CMS
+    DOM -->|Progressive Enhancement| ConstraintEngine
+    UserAction -->|Async Submission| API
+    API --> D1
+    API --> Resend

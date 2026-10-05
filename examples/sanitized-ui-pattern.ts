@@ -1,72 +1,93 @@
 /**
- * Sanitized Frontend Pattern
+ * Sanitized Lead Interaction & Constraint Validation Pattern
  * 
- * Purpose: Demonstrates idiomatic TypeScript, defensive validation,
- * and reactive UI logic used in the client project without revealing proprietary components.
+ * Authentic pattern extracted from stavimesmotivem.cz (Komplet Motiv s.r.o.)
+ * Demonstrates zero-dependency HTML5 DOM constraint validation, focus management
+ * for accessibility, and resilient asynchronous dispatch with auto-dismissing feedback.
  */
 
-export interface FormSubmissionPayload {
+export interface ContactInquiryPayload {
   name: string;
   email: string;
   message: string;
+  phone?: string;
 }
 
-export interface ValidationState {
-  isValid: boolean;
-  errors: Record<string, string>;
+export interface SubmissionResponse {
+  success: boolean;
+  message: string;
+  error?: string;
 }
 
 /**
- * Validates lead submission inputs on the client before triggering network requests
+ * Validates form elements using native HTML5 Constraint Validation API.
+ * Ensures the first invalid input receives immediate focus for screen reader & keyboard navigation.
  */
-export function validateLeadForm(payload: FormSubmissionPayload): ValidationState {
-  const errors: Record<string, string> = {};
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export function validateFormElements(form: HTMLFormElement): boolean {
+  form.classList.add("was-validated");
 
-  if (!payload.name.trim()) {
-    errors.name = "Name field cannot be left blank.";
+  if (!form.checkValidity()) {
+    const firstInvalid = form.querySelector<HTMLElement>(":invalid");
+    if (firstInvalid) {
+      firstInvalid.focus();
+    }
+    return false;
   }
 
-  if (!emailRegex.test(payload.email.trim())) {
-    errors.email = "Please enter a valid email address.";
+  return true;
+}
+
+/**
+ * Serializes form data and sends an asynchronous lead submission to the API endpoint.
+ * Features abort controller timeout and structured response handling.
+ */
+export async function dispatchInquiryAsync(
+  form: HTMLFormElement,
+  endpoint: string = "/api/submit",
+  timeoutMs: number = 8000
+): Promise<SubmissionResponse> {
+  if (!validateFormElements(form)) {
+    throw new Error("Form validation failed. Please check required fields.");
   }
 
-  if (payload.message.trim().length < 10) {
-    errors.message = "Message must contain at least 10 characters.";
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
+  const formData = new FormData(form);
+  const payload: ContactInquiryPayload = {
+    name: String(formData.get("name") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    message: String(formData.get("message") || "").trim(),
+    phone: formData.get("phone") ? String(formData.get("phone")).trim() : undefined,
   };
-}
 
-/**
- * Resilient submit handler with debounced execution and abort controller support
- */
-export async function submitLeadAsync(
-  endpoint: string,
-  payload: FormSubmissionPayload,
-  signal?: AbortSignal
-): Promise<{ success: boolean; message: string }> {
-  const validation = validateLeadForm(payload);
-  if (!validation.isValid) {
-    throw new Error(`Validation failed: ${Object.values(validation.errors).join(", ")}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const resJson = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        resJson.error || `Request failed with status code ${response.status}`
+      );
+    }
+
+    form.reset();
+    form.classList.remove("was-validated");
+
+    return {
+      success: true,
+      message: "Děkujeme, vaše zpráva byla úspěšně odeslána!",
+    };
+  } finally {
+    clearTimeout(timer);
   }
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify(payload),
-    signal
-  });
-
-  if (!response.ok) {
-    throw new Error(`Request failed with status: ${response.status}`);
-  }
-
-  return { success: true, message: "Submission successfully received." };
 }

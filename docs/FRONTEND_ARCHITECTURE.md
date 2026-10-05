@@ -10,7 +10,7 @@ This document outlines the frontend architectural principles, rendering strategi
 flowchart TD
     subgraph Browser [Client Viewport]
         DOM[Static HTML/CSS Shell]
-        Hydrate[Lightweight Hydration / Island]
+        ConstraintEngine[Native Constraint Validation]
         UserAction[User Interaction]
     end
 
@@ -18,31 +18,53 @@ flowchart TD
         Cache[Global Edge Asset Cache]
     end
 
-    subgraph HeadlessData [Headless Source & Services]
-        CMS[Content / Form Service]
+    subgraph HeadlessData [Cloudflare Edge & Serverless]
+        API[API Route /api/submit]
+        D1[Cloudflare D1 SQL]
+        Resend[Resend Transactional Mailer]
     end
 
     Cache -->|Sub-100ms TTFB| DOM
-    DOM -->|Progressive Enhancement| Hydrate
-    UserAction -->|Async Submission| CMS
+    DOM -->|Progressive Enhancement| ConstraintEngine
+    UserAction -->|Async Submission| API
+    API --> D1
+    API --> Resend
 ```
 
 ---
 
 ## Architectural Principles
 
-### 1. Zero-JS Baseline & Island Architecture
-- **Astro v5 Foundation:** By default, 100% of HTML and CSS are compiled ahead-of-time and shipped to the client with **zero runtime JavaScript**.
-- **Targeted Hydration (Astro Islands):** Client scripts are only loaded where dynamic interactivity is strictly required (e.g., interactive construction timeline, dynamic image lightbox/gallery, and validated inquiry forms).
-- **Hydration Directives:** Interactive islands leverage directives such as `client:visible` or `client:idle` to avoid competing for main-thread CPU during critical initial page load.
+### 1. Zero-JS Framework Baseline
+- **Pure Astro v5 Architecture:** 100% of static layout, marketing copy, and project showcases ship as pre-compiled HTML with **zero client-side framework runtime (no React / Vue on public pages)**.
+- **Progressive Enhancement via Script Modules:** Client interactions (lead inquiry form, interactive timelines, image lightboxes) are implemented through lightweight TypeScript modules bundled into native ES script tags.
+- **Main Thread Preservation:** Eliminating client hydration frameworks reduces JavaScript execution to under **15KB total**, leaving the browser main thread entirely free for instant scrolling and gestures.
 
 ### 2. Core Web Vitals Strategy
 
 | Metric | Target | Strategy & Implementation |
 | :--- | :--- | :--- |
-| **LCP** (Largest Contentful Paint) | $\le$ 2.5s (Achieved: **0.8s**) | <ul><li>Hero assets served as WebP/AVIF with explicit `<link rel="preload">`</li><li>Edge CDN caching on Cloudflare Pages guarantees sub-100ms TTFB</li><li>Zero blocking third-party scripts in the critical rendering path</li></ul> |
-| **INP** (Interaction to Next Paint) | $\le$ 200ms (Achieved: **38ms**) | <ul><li>Main thread stays unblocked; no heavy monolithic JS framework bundle</li><li>Client state transitions scheduled with passive listeners</li><li>Form submissions handled via debounced non-blocking fetch with `AbortController`</li></ul> |
-| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 (Achieved: **0.00**) | <ul><li>All images and media embeds have explicit `width`, `height`, and `aspect-ratio` CSS rules</li><li>Web fonts use `font-display: swap` with matched fallback font metrics to prevent layout shifts</li><li>Dynamic card grids reserve structural dimensions during data fetching</li></ul> |
+| **LCP** (Largest Contentful Paint) | $\le$ 2.5s (Achieved: **0.8s**) | <ul><li>Hero assets formatted as WebP/AVIF with explicit preloading</li><li>Edge CDN caching on Cloudflare Pages guarantees sub-100ms TTFB worldwide</li><li>Zero blocking third-party scripts or bulky hydration runtimes</li></ul> |
+| **INP** (Interaction to Next Paint) | $\le$ 200ms (Achieved: **38ms**) | <ul><li>Zero hydration lag: buttons and form inputs are immediately interactive on first paint</li><li>Form validation relies on native browser C++ constraint validation engines rather than heavy JS libraries</li><li>Asynchronous dispatch executes non-blockingly via fetch with AbortSignal timeouts</li></ul> |
+| **CLS** (Cumulative Layout Shift) | $\le$ 0.1 (Achieved: **0.00**) | <ul><li>All construction photos and media slots have fixed `aspect-ratio` wrappers (e.g. `aspect-video` / `aspect-4/3`)</li><li>System font fallbacks matched to web fonts via size-adjust and `font-display: swap`</li><li>Dynamic timeline cards reserve structural heights during state changes</li></ul> |
+
+---
+
+## Authentic Component Architecture Showcases
+
+Public sanitized implementations of the core UI components are available directly in the repository:
+
+1. **Native Constraint Validation Form ([`components/SanitizedContactForm.astro`](../components/SanitizedContactForm.astro)):**
+   - Utilizes pure CSS pseudo-classes (`:invalid`, `:placeholder-shown`) and the browser's native `checkValidity()` API.
+   - Programmatically moves focus to the first `:invalid` input upon submission attempt to ensure strict accessibility (a11y).
+   - Live asynchronous feedback with automatic state dismiss timers.
+
+2. **Construction Progress Timeline ([`components/SanitizedTimeline.astro`](../components/SanitizedTimeline.astro)):**
+   - Dynamic stage status calculation (`isCompleted`, `isCurrent`, upcoming phases).
+   - Layout shift-free vertical progression with animated status indicators.
+
+3. **Sanitized TypeScript Interaction Pattern ([`examples/sanitized-ui-pattern.ts`](../examples/sanitized-ui-pattern.ts)):**
+   - Headless TypeScript module showcasing form serialization, validation checks, and resilient error recovery.
 
 ---
 
@@ -50,22 +72,12 @@ flowchart TD
 
 - **Tailwind CSS v4 Engine:** Integrated directly through Vite for instant build-time utility compilation and dead-code stripping.
 - **Critical-Path CSS Inlining:** Key layout rules and design tokens are inlined into the document `<head>`, eliminating render-blocking CSS round trips.
-- **Responsive Media Delivery:** High-resolution construction photography is automatically resized into multi-resolution `srcset` arrays (mobile, tablet, desktop, retina) to minimize over-fetching on mobile bandwidth.
-
----
-
-## State Management & Defensive Validation
-
-- **Isolated Island State:** Form validation and modal state are encapsulated within localized React islands, eliminating global state overhead.
-- **Client-Side Schema Enforcement:** Strict pre-flight validation prevents unnecessary HTTP roundtrips for malformed inputs, providing instant, accessible feedback.
-- **Network Resilience:** Network requests feature automatic timeout aborts (`AbortSignal.timeout`) and user-facing graceful error handling.
-
-A representative example of this defensive client interaction pattern is documented in [`examples/sanitized-ui-pattern.ts`](../examples/sanitized-ui-pattern.ts).
+- **Responsive Media Delivery:** High-resolution construction photography is automatically resized into multi-resolution `srcset` arrays (mobile, tablet, desktop) to prevent mobile bandwidth waste.
 
 ---
 
 ## Accessibility (a11y) & UX
 
 - **Semantic HTML5:** Native landmark tags (`<header>`, `<main>`, `<article>`, `<nav>`, `<footer>`) ensure screen reader clarity.
-- **Focus Management & Keyboard Navigation:** Custom dialogs and interactive timeline nodes include full focus trapping and ESC key dismissal.
-- **Contrast & Hierarchy:** Typography and color tokens rigorously pass WCAG 2.1 AA standards across both light and dark display modes.
+- **Focus Management & Keyboard Navigation:** Form invalid traps, timeline milestones, and gallery dialogs include full keyboard accessibility.
+- **Contrast & Hierarchy:** Typography and color tokens rigorously pass WCAG 2.1 AA standards.

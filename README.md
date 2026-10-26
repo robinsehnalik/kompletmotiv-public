@@ -6,7 +6,7 @@
 > the production source repository remains private. This repository serves as an architectural  
 > breakdown, responsive UI review, and web performance case study.
 
-[🔗 Visit Live Website](https://stavimesmotivem.cz) · [📐 System Architecture](architecture.md) · [👤 Return to Portfolio](https://sehnalik.com)
+[🔗 Visit Live Website](https://stavimesmotivem.cz) · [📐 System Architecture](architecture.md) · [🔍 SEO Strategy](seo.md) · [👤 Return to Portfolio](https://sehnalik.com)
 
 ---
 
@@ -27,6 +27,7 @@
 | **Data & Storage** | Cloudflare D1 (SQLite) / Cloudflare R2 Bucket / Local SQLite Fallback |
 | **CMS & Mail Engine** | Embedded Schema-Driven CMS / Resend Transactional Mail API |
 | **Architecture Specification** | Fully unified master document in [`architecture.md`](architecture.md) |
+| **SEO & Crawl Strategy** | Technical audit & regional authority report in [`seo.md`](seo.md) |
 
 ---
 
@@ -73,6 +74,20 @@ Pre-rendered layouts, fluid typography, and zero client hydration runtime guaran
 - **Layout Stability:** Reserved aspect-ratio wrappers across media galleries and portfolio cards ensure layout consistency during asset loading.
 
 For full benchmark analysis and technical drivers, see [`architecture.md § 10`](architecture.md#10-frontend-performance--core-web-vitals).
+
+---
+
+## Technical SEO, Local Search Authority & Structured Data
+
+For a regional construction contractor in the Moravian-Silesian Region, search visibility requires flawless technical crawlability, strict NAP consistency, and machine-readable local entities:
+
+- **LocalBusiness & GeneralContractor Schema.org JSON-LD:** Every public page outputs a rich `@graph` embedding company identity, postal address (`Ó. Lysohorského 702, Frýdek-Místek`), tax ID (`IČ: 14064103`), GPS coordinates, founders, and `areaServed` (Frýdek-Místek, Ostrava, Moravskoslezský kraj), accompanied by dynamic `BreadcrumbList` hierarchies.
+- **Dynamic XML Sitemap (`sitemap.xml.ts`):** Queries 100% of published CMS documents (`/vystavba/[slug]`, `/projekty/[slug]`, `/blog/[slug]`, `/galerie`) with real `<lastmod>` timestamps derived from actual `_updatedAt` dates.
+- **Zero Soft-404s & Crawl Budget Discipline:** Replaced artificial 302 redirects on missing slugs with true HTTP 404 status codes, blocked unpublished `?preview` routes in `robots.txt`, and applied `noindex` to legal sub-pages (`/gdpr`, `/cookies`) and all `/admin` routes.
+- **Regional Meta & OpenGraph Signals:** High-intent local title targeting (`Stavební firma Frýdek-Místek a Ostrava | Komplet motiv s.r.o.`), regional geo meta tags (`CZ-80`, `Frýdek-Místek`), and dynamic OpenGraph social cards with actual project photography.
+- **LCP Resource Prioritization:** Tailored `fetchpriority="high"` strictly to above-the-fold hero images while removing hidden mobile asset downloads and providing descriptive alt tags.
+
+For the full technical SEO audit and implementation details, see **[`seo.md`](seo.md)**.
 
 ---
 

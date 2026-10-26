@@ -726,6 +726,15 @@ Audited across global edge testing locations:
 - **Automated Image Derivative Pipeline:** `<CmsPicture />` dynamically emits WebP/AVIF `srcset` variations with responsive breakpoints and focal-point cropping coordinates, preventing bandwidth waste on mobile viewports.
 - **Layout Shift Management:** Aspect-ratio wrappers across media galleries and portfolio cards reserve layout dimensions before images load, constraining visual reflow.
 
+### 10.3. Technical SEO, Local Authority & Structured Data
+
+Search engine discovery and regional visibility are engineered for long-term organic authority:
+- **Schema.org Linked `@graph`:** Outputs connected `LocalBusiness`, `GeneralContractor`, `WebSite`, and `BreadcrumbList` schemas across the corporate site and construction portfolio.
+- **Crawl Budget & Soft-404 Elimination:** Restricts crawler access to administrative endpoints via `robots.txt` and returns real HTTP 404 status codes on nonexistent routes.
+- **Dynamic Multi-Collection XML Sitemap:** Automatically discovers and indexes 100% of published active projects (`/projekty/*`, `/vystavba/*`, `/blog/*`) with ISO 8601 `lastmod` dates.
+
+For the exhaustive SEO audit and regional optimization strategy, see [`seo.md`](seo.md).
+
 ---
 
 ## 11. Showcase Components & Sanitized Patterns

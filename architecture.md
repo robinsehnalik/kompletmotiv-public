@@ -1,7 +1,7 @@
 # System Architecture — Komplet Motiv (`stavimesmotivem.cz`)
 
 > **What this repository does:**  
-> **Komplet Motiv** (`stavimesmotivem.cz`) is the web platform and integrated headless/monolithic Content Management System (CMS) for **Komplet Motiv s.r.o.**, a Czech construction and real-estate development company. It serves public marketing pages, active construction listings (`výstavba`), completed reference projects (`projekty`), a photo gallery, a blog, and lead-capture forms—all powered by an embedded, schema-driven CMS running on **Astro 5 SSR**, **Cloudflare Workers (D1 + R2)** in production, and **Node.js (SQLite + local filesystem)** in local development.
+> **Komplet Motiv** (`stavimesmotivem.cz`) is the web platform and integrated headless/monolithic Content Management System (CMS) for **Komplet Motiv s.r.o.**, a Czech construction and real-estate development company. It serves public marketing pages, active construction listings (`výstavba`), completed reference projects (`projekty`), a photo gallery, a blog, and lead-capture forms—all powered by an embedded, schema-driven CMS running on **Astro 6 SSR**, **Cloudflare Workers (D1 + R2)** in production, and **Node.js (SQLite + local filesystem)** in local development.
 
 ---
 
@@ -40,7 +40,7 @@
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Framework** | [Astro 5](https://astro.build/) (`output: "server"`) | Server-side rendered (SSR) pages, routing, and API endpoints |
+| **Framework** | [Astro 6](https://astro.build/) (`output: "server"`) | Server-side rendered (SSR) pages, routing, and API endpoints |
 | **Interactive Islands** | [React 19](https://react.dev/) + [Radix UI](https://www.radix-ui.com/) | Rich interactive Admin UI components (RichText editor, DataTables, modals) |
 | **Edge Runtime** | [Cloudflare Workers](https://workers.cloudflare.com/) (`@astrojs/cloudflare`) | Global edge execution for SSR pages and CMS API routes |
 | **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) / `better-sqlite3` + [Drizzle ORM](https://orm.drizzle.team/) | SQLite-compatible relational persistence in cloud and local environments |
@@ -83,7 +83,7 @@ flowchart TB
         CronTrigger["Cloudflare Cron Trigger (0 * * * *)"]
     end
 
-    subgraph Edge["Astro 5 SSR Application (Cloudflare Worker / Node.js)"]
+    subgraph Edge["Astro 6 SSR Application (Cloudflare Worker / Node.js)"]
         Middleware["Auth & Session Middleware\n(src/cms/middleware/auth.ts)"]
         PublicPages["Public Astro Pages\n(src/pages/*.astro)"]
         ContactAPI["Contact Form API\n(POST /api/submit)"]
@@ -222,7 +222,7 @@ sequenceDiagram
 
 ```text
 kompletmotiv/
-├── astro.config.mjs                 # Astro 5 SSR configuration, Cloudflare adapter, Vite plugins, CMS integration
+├── astro.config.mjs                 # Astro 6 SSR configuration, Cloudflare adapter, Vite plugins, CMS integration
 ├── wrangler.toml                    # Cloudflare Workers config: D1 (CMS_DB), R2 (CMS_MEDIA), Images, Cron (0 * * * *)
 ├── drizzle.config.ts                # Drizzle Kit configuration pointing to src/cms/.generated/schema.ts
 ├── vitest.config.ts                 # Vitest runner configuration with @/ path alias resolution
@@ -259,7 +259,7 @@ kompletmotiv/
     │   ├── cta.astro                # Call-to-action banner section
     │   ├── features.astro           # Homepage services & value proposition grid
     │   ├── footer.astro             # Site footer driven by cms.settings singleton
-    │   ├── hero.astro               # Homepage hero banner with dynamic CMS image & CTA buttons
+    │   ├── hero.astro               # Homepage hero banner with dynamic CMS image, mobile action buttons & CTA
     │   ├── sectionhead.astro        # Standardized page header component
     │   ├── navbar/
     │   │   ├── navbar.astro         # Responsive sticky header with mobile drawer toggle
@@ -278,6 +278,7 @@ kompletmotiv/
     │   ├── vystavba/[slug].astro    # Active construction detail page (before/during photos, specs, timeline, map)
     │   ├── projekty.astro           # Completed reference projects listing (/projekty)
     │   ├── projekty/[slug].astro    # Completed project detail page (gallery, specs, materials, timeline)
+    │   ├── planovane.astro          # Planned development projects listing (/planovane)
     │   ├── galerie.astro            # Aggregated photo gallery across all projects with lightbox
     │   ├── blog.astro               # Blog index page (/blog)
     │   ├── blog/[slug].astro        # Individual blog article page with RichText rendering
@@ -291,10 +292,11 @@ kompletmotiv/
     │       └── submit.ts            # Contact form handler (validates, escapes HTML, saves to DB, emails via Resend)
     │
     └── cms/                         # Embedded Headless/Monolithic CMS ("Kide CMS")
-        ├── cms.config.ts            # Central CMS configuration (SQLite dialect, "cs" locale, 13 collections)
+        ├── cms.config.ts            # Central CMS configuration (SQLite dialect, "cs" locale, 14 collections)
         ├── collections/             # Declarative Collection Schemas
         │   ├── vystavba.ts          # Active construction projects collection
-        │   ├── projekty.ts          # Completed reference projects collection
+        │   ├── projekty.ts          # Reference & planned development projects collection (category: realizovane | planovane)
+        │   ├── seo.ts               # Global SEO and per-section metadata singleton
         │   ├── blog.ts              # Blog articles collection (with auto-snippet beforeCreate hook)
         │   ├── team.ts              # Team members collection
         │   ├── users.ts             # CMS administrators & editors collection
@@ -514,10 +516,16 @@ erDiagram
         text _id PK
         text title
         text slug UK
+        text category "realizovane | planovane"
         text description
         text image
         text location
         text publish_date
+        text start_date
+        text delivery_date
+        text before_image
+        text katastr_url
+        text map_embed_url
         text gallery "JSON array"
         text specs "JSON array"
         text materials "JSON array"
@@ -528,6 +536,27 @@ erDiagram
         text _status "draft | published | scheduled"
         text _published_at
         text _published "JSON snapshot"
+        text _created_at
+        text _updated_at
+    }
+
+    cms_seo {
+        text _id PK
+        text site_name
+        text site_description
+        text default_og_image
+        text planovane_title
+        text planovane_description
+        text planovane_keywords
+        text vystavba_title
+        text vystavba_description
+        text vystavba_keywords
+        text projekty_title
+        text projekty_description
+        text projekty_keywords
+        text blog_title
+        text blog_description
+        text blog_keywords
         text _created_at
         text _updated_at
     }
@@ -590,7 +619,7 @@ erDiagram
 | Table Name | Slug | Drafts | Searchable | Key Domain Columns |
 | :--- | :--- | :---: | :---: | :--- |
 | `cms_vystavba` | `vystavba` | Yes | Yes | `title`, `slug`, `description`, `image`, `location`, `katastr_url`, `map_embed_url`, `publish_date`, `start_date`, `delivery_date`, `before_image`, `during_images` (JSON), `specs` (JSON), `materials` (JSON), `timeline` (JSON), `body` (RichText) |
-| `cms_projekty` | `projekty` | Yes | Yes | `title`, `slug`, `description`, `image`, `location`, `publish_date`, `gallery` (JSON), `specs` (JSON), `materials` (JSON), `timeline` (JSON), `body` (RichText) |
+| `cms_projekty` | `projekty` | Yes | Yes | `title`, `slug`, `category` (`realizovane` \| `planovane`), `description`, `image`, `location`, `publish_date`, `start_date`, `delivery_date`, `before_image`, `katastr_url`, `map_embed_url`, `gallery` (JSON), `specs` (JSON), `materials` (JSON), `timeline` (JSON), `body` (RichText) |
 | `cms_blog` | `blog` | Yes | Yes | `title`, `slug`, `snippet`, `image`, `publish_date`, `author`, `category`, `tags` (JSON), `body` (RichText) |
 | `cms_team` | `team` | Yes | No | `name`, `title` (position), `avatar`, `description`, `publish_date` |
 | `cms_users` | `users` | No | No | `name`, `email` (unique), `role` (`admin` \| `editor`), `password` (PBKDF2 hash) |
@@ -601,6 +630,7 @@ erDiagram
 | Table Name | Slug | Purpose & Key Columns |
 | :--- | :--- | :--- |
 | `cms_settings` | `settings` | Global company details (`company_name`, `email`, `phone`, `address`, `ic`), executive contacts (`executive1_*`, `executive2_*`), `favicon`, `opengraph_image` |
+| `cms_seo` | `seo` | Global and per-section SEO overrides (`site_name`, `site_description`, `default_og_image`, `planovane_title`, `planovane_description`, `planovane_keywords`, `vystavba_*`, `projekty_*`, `blog_*`) |
 | `cms_home` | `home` | Homepage hero (`hero_title`, `hero_subtitle`, `hero_description`, `hero_image`), features section (`features` JSON), and bottom CTA (`cta_*`) |
 | `cms_about` | `about` | Company intro (`intro_title`, `intro_subtitle`, `intro_body`), 3 core values (`value1..3_*`), and services list (`services` JSON) |
 | `cms_contact` | `contact` | Contact page header and form copy (`title`, `description`, `form_heading`, `form_description`) |
@@ -731,7 +761,7 @@ Audited across global edge testing locations:
 Search engine discovery and regional visibility are engineered for long-term organic authority:
 - **Schema.org Linked `@graph`:** Outputs connected `LocalBusiness`, `GeneralContractor`, `WebSite`, and `BreadcrumbList` schemas across the corporate site and construction portfolio.
 - **Crawl Budget & Soft-404 Elimination:** Restricts crawler access to administrative endpoints via `robots.txt` and returns real HTTP 404 status codes on nonexistent routes.
-- **Dynamic Multi-Collection XML Sitemap:** Automatically discovers and indexes 100% of published active projects (`/projekty/*`, `/vystavba/*`, `/blog/*`) with ISO 8601 `lastmod` dates.
+- **Dynamic Multi-Collection XML Sitemap:** Automatically discovers and indexes 100% of published active projects (`/projekty/*`, `/planovane`, `/vystavba/*`, `/blog/*`) with ISO 8601 `lastmod` dates.
 
 For the exhaustive SEO audit and regional optimization strategy, see [`seo.md`](seo.md).
 

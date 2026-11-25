@@ -23,7 +23,7 @@
 | **Site Type** | Corporate Marketing Site & Construction Portfolio Platform |
 | **Status** | Live in Production |
 | **Runtime Topology** | Edge-First SSR + Embedded CMS (Cloudflare Workers Runtime) |
-| **Frontend Stack** | Astro v5 / Tailwind CSS v4 / Vanilla TypeScript |
+| **Frontend Stack** | Astro v6 / Tailwind CSS v4 / Vanilla TypeScript |
 | **Data & Storage** | Cloudflare D1 (SQLite) / Cloudflare R2 Bucket / Local SQLite Fallback |
 | **CMS & Mail Engine** | Embedded Schema-Driven CMS / Resend Transactional Mail API |
 | **Architecture Specification** | Fully unified master document in [`architecture.md`](architecture.md) |
@@ -82,7 +82,7 @@ For full benchmark analysis and technical drivers, see [`architecture.md § 10`]
 For a regional construction contractor in the Moravian-Silesian Region, search visibility requires flawless technical crawlability, strict NAP consistency, and machine-readable local entities:
 
 - **LocalBusiness & GeneralContractor Schema.org JSON-LD:** Every public page outputs a rich `@graph` embedding company identity, postal address (`Ó. Lysohorského 702, Frýdek-Místek`), tax ID (`IČ: 14064103`), GPS coordinates, founders, and `areaServed` (Frýdek-Místek, Ostrava, Moravskoslezský kraj), accompanied by dynamic `BreadcrumbList` hierarchies.
-- **Dynamic XML Sitemap (`sitemap.xml.ts`):** Queries 100% of published CMS documents (`/vystavba/[slug]`, `/projekty/[slug]`, `/blog/[slug]`, `/galerie`) with real `<lastmod>` timestamps derived from actual `_updatedAt` dates.
+- **Dynamic XML Sitemap (`sitemap.xml.ts`):** Queries 100% of published CMS documents (`/vystavba/[slug]`, `/projekty/[slug]`, `/planovane`, `/blog/[slug]`, `/galerie`) with real `<lastmod>` timestamps derived from actual `_updatedAt` dates.
 - **Zero Soft-404s & Crawl Budget Discipline:** Replaced artificial 302 redirects on missing slugs with true HTTP 404 status codes, blocked unpublished `?preview` routes in `robots.txt`, and applied `noindex` to legal sub-pages (`/gdpr`, `/cookies`) and all `/admin` routes.
 - **Regional Meta & OpenGraph Signals:** High-intent local title targeting (`Stavební firma Frýdek-Místek a Ostrava | Komplet motiv s.r.o.`), regional geo meta tags (`CZ-80`, `Frýdek-Místek`), and dynamic OpenGraph social cards with actual project photography.
 - **LCP Resource Prioritization:** Tailored `fetchpriority="high"` strictly to above-the-fold hero images while removing hidden mobile asset downloads and providing descriptive alt tags.

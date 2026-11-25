@@ -9,7 +9,7 @@ This document outlines how we maximally improved Search Engine Optimization (SEO
 ### Dynamic XML Sitemap with Real `<lastmod>` Timestamps
 - **File**: [`src/pages/sitemap.xml.ts`](src/pages/sitemap.xml.ts)
 - **Before**: Returned a hardcoded 6-item list of static pages with today's date as `<lastmod>`. Missing `/galerie` and **100% of dynamic CMS pages** (`/projekty/[slug]`, `/vystavba/[slug]`, `/blog/[slug]`).
-- **After**: Queries all published entries from `cms.vystavba`, `cms.projekty`, and `cms.blog`, includes `/galerie`, and outputs accurate `<lastmod>` dates derived from each document's `_updatedAt` / `publishDate` timestamp.
+- **After**: Queries all published entries from `cms.vystavba`, `cms.projekty` (including reference and planned projects), and `cms.blog`, includes `/planovane` and `/galerie`, and outputs accurate `<lastmod>` dates derived from each document's `_updatedAt` / `publishDate` timestamp.
 - **Impact**: Googlebot and SeznamBot immediately discover every active construction offering, reference project, and blog post without relying solely on multi-hop HTML crawling.
 
 ### Eliminated Soft-404 Redirects (`302` → Real `404`)
@@ -83,3 +83,12 @@ This document outlines how we maximally improved Search Engine Optimization (SEO
   - Replaced them with 2 authentic Czech construction guides targeting regional search queries (*"Jak připravit stavební pozemek a vyřídit stavební povolení na Frýdecko-Místecku a Ostravsku"* and *"Nízkoenergetický rodinný dům na klíč: Jaké technologie se dnes vyplatí"*).
 - **Fixed Database Migration & Seed Schema Mismatch**:
   - Added missing columns (`start_date`, `delivery_date` on `cms_vystavba`; `favicon`, `opengraph_image` on `cms_settings`) to `0002_aberrant_lilandra.sql` and aligned `data/seed-production.sql` column counts so all `cms_vystavba` and `cms_settings` records seed without errors.
+
+---
+
+## 6. CMS-Manageable Global and Section SEO (`/admin/collections/seo`)
+
+- **Files**: [`src/cms/collections/seo.ts`](src/cms/collections/seo.ts), [`src/cms/migrations/0004_adorable_dragon_man.sql`](src/cms/migrations/0004_adorable_dragon_man.sql)
+- **Improvements**:
+  - Introduced a dedicated **SEO & Site Metadata** (`seo`) singleton collection in the CMS (`cms_seo`) providing custom per-section meta titles, meta descriptions, and keywords for `/planovane`, `/vystavba`, `/projekty`, and `/blog`.
+  - Enables non-technical administrators to optimize search snippets, social OpenGraph metadata, and indexing directives directly from the `/admin` backoffice without code redeployments.
